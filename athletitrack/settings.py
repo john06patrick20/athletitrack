@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = 'django-insecure-ndL3MVQPk6xXJCM5wMnE5HChnq_KKn_Dj1uGisXzZJGD1sePzpYEaSiX6kPAg4vQ4AI'
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 #ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 
@@ -26,6 +26,7 @@ ALLOWED_HOSTS = [
 ]
 
 CSRF_TRUSTED_ORIGINS = [
+    "https://athletitrack.onrender.com",
     "https://*.ngrok-free.app",  # allow any ngrok subdomain
     'https://abilities-inspiration-hypothetical-true.trycloudflare.com',
     "https://aspects-summaries-writer-guides.trycloudflare.com",
