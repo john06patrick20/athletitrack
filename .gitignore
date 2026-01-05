@@ -1,0 +1,25 @@
+/venv
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+
+# Django
+db.sqlite3
+staticfiles/
+media/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Virtual environment
+venv/
+
+# Executables
+*.exe

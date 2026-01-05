@@ -1,0 +1,255 @@
+<!-- templates/events/game_report.html -->
+{% extends "base.html" %}
+{% load static custom_filters %}
+
+{% block title %}Game Report: {{ event.name }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h2>Game Report</h2>
+        <h4 class="text-primary">{{ event.name }}</h4>
+        <h6 class="text-muted">{{ event.start_time|date:"F d, Y" }}</h6>
+    </div>
+    <a href="{% url 'event-detail' pk=event.pk %}" class="btn btn-secondary">Back to Event Details</a>
+</div>
+
+<!-- Scoreboard Card -->
+<div class="card shadow-sm mb-4">
+    <div class="card-header"><h4 class="mb-0">Scoreboard</h4></div>
+    <div class="card-body">
+        <p class="text-muted small">Your team's score is calculated from the 'Points' stat below. Enter the opponent's score and save.</p>
+        <form method="post">
+            {% csrf_token %}
+            <div class="row align-items-end">
+                <div class="col-md-5">
+                    <label for="{{ outcome_form.our_score.id_for_label }}" class="form-label fw-bold">{{ outcome_form.our_score.label }}</label>
+                    {{ outcome_form.our_score }}
+                </div>
+                <div class="col-md-5">
+                    <label for="{{ outcome_form.opponent_score.id_for_label }}" class="form-label fw-bold">{{ outcome_form.opponent_score.label }}</label>
+                    {{ outcome_form.opponent_score }}
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" name="save_outcome" class="btn btn-primary w-100">Save Score</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Player Statistics Card -->
+<div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Individual Player Statistics</h4>
+        <span id="auto-save-status" class="text-muted small"></span>
+    </div>
+    <div class="card-body">
+        {% if participants %}
+        <form id="player-stats-form">
+            {% csrf_token %}
+            <div class="table-responsive table-fixed-header">
+                <table class="table table-bordered table-sm" id="player-stats-table">
+                    <thead class="table-light sticky-top">
+                        <tr>
+                            <th style="min-width: 200px;">Participant</th>
+                            {% if first_form %}{% for field in first_form %}
+                                <th class="text-center" style="min-width: 150px;" data-stat-short-name="{{ field.name }}">{{ field.label }}</th>
+                                {% if 'made' in field.label|lower %}<th class="text-center" style="min-width: 80px;">%</th>{% endif %}
+                            {% endfor %}{% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for athlete in participants %}
+                        <tr data-athlete-id="{{ athlete.pk }}">
+                            <td class="align-middle">
+                                <div class="d-flex align-items-center">
+                                    {% if athlete.user.image %}<img src="{{ athlete.user.image.url }}" class="rounded-circle me-2" style="width:30px;height:30px;object-fit:cover;">
+                                    {% else %}<img src="{% static 'images/default_profile.png' %}" class="rounded-circle me-2" style="width:30px;height:30px;object-fit:cover;">{% endif %}
+                                    <strong>{{ athlete.user.get_full_name }}</strong>
+                                </div>
+                            </td>
+                            {% with form=participant_forms|get_item:athlete.pk %}
+                                {% for field in form %}
+                                    <td><div class="input-group input-group-sm">
+                                        <button class="btn btn-outline-secondary decrement-btn" type="button" tabindex="-1">-</button>
+                                        {{ field }}
+                                        <button class="btn btn-outline-secondary increment-btn" type="button" tabindex="-1">+</button>
+                                    </div></td>
+                                    {% if 'made' in field.label|lower %}<td class="align-middle text-center percentage-cell" data-perc-group="{{ field.label|stat_group_slug }}">--</td>{% endif %}
+                                {% endfor %}
+                            {% endwith %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr class="table-light">
+                            <th class="text-end">Team Totals:</th>
+                            {% if first_form %}{% for field in first_form %}
+                                <th class="text-center fw-bold" data-total-for="{{ field.name }}">0</th>
+                                {% if 'made' in field.label|lower %}<th class="text-center fw-bold" data-perc-total-for="{{ field.label|stat_group_slug }}">0%</th>{% endif %}
+                            {% endfor %}{% endif %}
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </form>
+        {% else %}
+            <p>No participants in this event.</p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.table-fixed-header { height: 60vh; overflow-y: auto; }
+</style>
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    const statsTable = $('#player-stats-table');
+    if (!statsTable.length) return; // Exit if the main table doesn't exist
+
+    // =======================================================
+    // === 1. SETUP FOR AUTO-SAVE ===
+    // =======================================================
+    const autoSaveStatus = $('#auto-save-status');
+    const csrfToken = $('[name=csrfmiddlewaretoken]').val();
+    const eventId = {{ event.pk }};
+    let debounceTimer;
+
+    function debounce(func, delay) {
+        return function() {
+            const context = this;
+            const args = arguments;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => func.apply(context, args), delay);
+        };
+    }
+
+    function autoSaveStat(inputElement) {
+        const input = $(inputElement);
+        const athleteId = input.closest('tr').data('athlete-id');
+        const rawName = input.attr('name');
+        const statShortName = rawName.split('-').pop();
+        const value = input.val();
+
+        autoSaveStatus.text('Saving...').removeClass('text-success text-danger').addClass('text-info');
+        fetch(`{% url 'auto-save-stat' %}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': csrfToken },
+            body: new URLSearchParams({
+                'athlete_id': athleteId, 'event_id': eventId, 'stat_short_name': statShortName, 'value': value
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                autoSaveStatus.text('Saved!').removeClass('text-info text-danger').addClass('text-success');
+            } else {
+                autoSaveStatus.text('Save Failed!').removeClass('text-info').addClass('text-danger');
+            }
+        })
+        .catch(error => {
+            console.error('Auto-save error:', error);
+            autoSaveStatus.text('Error!').removeClass('text-info').addClass('text-danger');
+        });
+    }
+
+    const debouncedAutoSave = debounce(autoSaveStat, 1500); // 1.5-second delay
+
+
+    // =======================================================
+    // === 2. CALCULATION FUNCTIONS ===
+    // =======================================================
+
+    function calculateColumnTotals() {
+        statsTable.find('tfoot [data-total-for]').each(function() {
+            const footerCell = $(this);
+            const shortName = footerCell.data('total-for');
+            const inputs = statsTable.find(`tbody input[name$="-${shortName}"]`);
+            let total = 0;
+            inputs.each(function() {
+                const value = parseFloat($(this).val());
+                if (!isNaN(value)) { total += value; }
+            });
+            footerCell.text(total);
+        });
+    }
+
+    function calculatePercentages() {
+        statsTable.find('tbody tr').each(function() {
+            const row = $(this);
+            row.find('input[data-stat-type="made"]').each(function() {
+                const madeInput = $(this);
+                const statGroup = madeInput.data('stat-group');
+                const attemptedInput = row.find(`input[data-stat-group="${statGroup}"][data-stat-type="attempted"]`);
+                const percentageCell = row.find(`td[data-perc-group="${statGroup}"]`);
+                if (attemptedInput.length) {
+                    const made = parseFloat(madeInput.val()) || 0;
+                    const attempted = parseFloat(attemptedInput.val()) || 0;
+                    const percentage = (attempted > 0) ? (made / attempted) * 100 : 0;
+                    percentageCell.text(percentage.toFixed(0) + '%');
+                }
+            });
+        });
+
+        statsTable.find('tfoot [data-perc-total-for]').each(function() {
+            const percTotalCell = $(this);
+            const statGroup = percTotalCell.data('perc-total-for');
+            const madeHeader = statsTable.find(`thead th[data-stat-short-name*="made"][data-stat-short-name*="${statGroup.replace('s','')}"]`);
+            const attemptedHeader = statsTable.find(`thead th[data-stat-short-name*="attempted"][data-stat-short-name*="${statGroup.replace('s','')}"]`);
+            if (madeHeader.length && attemptedHeader.length) {
+                const totalMade = parseFloat(statsTable.find(`tfoot [data-total-for="${madeHeader.data('stat-short-name')}"]`).text()) || 0;
+                const totalAttempted = parseFloat(statsTable.find(`tfoot [data-total-for="${attemptedHeader.data('stat-short-name')}"]`).text()) || 0;
+                const totalPercentage = (totalAttempted > 0) ? (totalMade / totalAttempted) * 100 : 0;
+                percTotalCell.text(totalPercentage.toFixed(0) + '%');
+            }
+        });
+    }
+
+    function updateTeamScore() {
+        const ourScoreInput = $('#id_our_score');
+        const pointsTotalCell = statsTable.find("tfoot [data-total-for='PTS']"); // Assumes 'pts' is the short_name for Points
+        if (pointsTotalCell.length) {
+            ourScoreInput.val(pointsTotalCell.text());
+        }
+    }
+
+
+    // =======================================================
+    // === 3. EVENT LISTENERS AND INITIALIZATION ===
+    // =======================================================
+    
+    // Main calculation chain
+    function runAllCalculations() {
+        calculateColumnTotals();
+        calculatePercentages();
+        updateTeamScore();
+    }
+
+    // Listener for +/- button clicks
+    statsTable.on('click', '.increment-btn, .decrement-btn', function() {
+        const input = $(this).siblings('input[type="number"]');
+        let val = parseInt(input.val(), 10) || 0;
+        if ($(this).hasClass('increment-btn')) {
+            input.val(val + 1);
+        } else if (val > 0) {
+            input.val(val - 1);
+        }
+        input.trigger('input'); // This triggers the listener below
+    });
+
+    // Main listener for any input change (typing or button click)
+    statsTable.on('input', 'input[type="number"]', function() {
+        runAllCalculations(); // Update totals and percentages instantly
+        debouncedAutoSave(this); // Start the timer for auto-saving
+    });
+
+    // Run all calculations once on page load to initialize the view
+    runAllCalculations();
+});
+</script>
+{% endblock %}
