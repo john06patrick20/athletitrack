@@ -1,0 +1,79 @@
+<!-- templates/core/about.html -->
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}About AthletiTrack{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h2 class="mb-0">About AthletiTrack</h2>
+    </div>
+    <div class="card-body p-4">
+        <h4 class="card-title">Project Vision</h4>
+        <p>
+            <strong>AthletiTrack</strong> is a comprehensive, web-based platform designed to modernize athlete management at Eastern Visayas State University (EVSU). Our mission is to empower coaches and athletes with the data-driven tools they need to track performance, streamline event scheduling, and achieve their full potential.
+        </p>
+        <hr>
+        <h4 class="card-title mt-4">Core Features</h4>
+        <ul>
+            <li><strong>Role-Based Access Control:</strong> Secure, separate interfaces for Administrators, Coaches, and Athletes.</li>
+            <li><strong>Team-Centric Management:</strong> A robust system for organizing athletes and coaches into specific teams based on sport, campus, and gender.</li>
+            <li><strong>Automated Event Reminders:</strong> An intelligent notification system using email to ensure participants are always informed about upcoming events.</li>
+            <li><strong>Game-by-Game Statistics:</strong> A dynamic "Game Report" system for coaches to enter sport-specific performance data for each athlete after an event.</li>
+            <li><strong>Comprehensive Analytics:</strong> An advanced reporting dashboard with interactive charts, high-level KPIs, and data export capabilities.</li>
+        </ul>
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- === NEW "ABOUT THE TEAM" SECTION === -->
+<!-- ============================================= -->
+<div class="mt-5">
+    <h2 class="text-center mb-4">About the Development Team</h2>
+    <div class="row justify-content-center">
+
+        <!-- TEAM MEMBER CARD 1 -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 text-center shadow-sm">
+                <div class="card-body">
+                    <img src="{% static 'images/your_photo_1.jpg' %}" alt="Team Member 1" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    <h5 class="card-title">John Patrick Camposano</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">Lead Developer / Project Manager</h6>
+                    <p class="card-text small">
+                        Responsible for the back-end architecture, database design, and overall project direction. Focused on implementing the core logic for performance tracking and event management.
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <a href="mailto:johnpatrick.camposano@evsu.edu.ph" class="text-muted">johnpatrick.camposano@evsu.edu.ph</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- TEAM MEMBER CARD 2 (Add more as needed) -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 text-center shadow-sm">
+                <div class="card-body">
+                    <!-- Use the default profile pic if you don't have a photo -->
+                    <img src="{% static 'images/default_profile.png' %}" alt="Team Member 2" class="rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                    <h5 class="card-title">[Member 2 Name]</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">[Member 2 Role, e.g., UI/UX Designer]</h6>
+                    <p class="card-text small">
+                        [Brief description of their contribution, e.g., "Designed the user interface, created the CSS styles, and ensured the application is responsive and user-friendly."]
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <a href="mailto:member2@example.com" class="text-muted">[Member 2 Email]</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add more col-md-6 col-lg-4 divs for each team member -->
+
+    </div>
+</div>
+<!-- ============================================= -->
+<!-- === END OF NEW SECTION === -->
+<!-- ============================================= -->
+
+{% endblock %}

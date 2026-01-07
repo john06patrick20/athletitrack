@@ -17,6 +17,7 @@ from .forms import StatisticForm
 
 from django.urls import reverse
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView, DetailView
+from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.urls import reverse_lazy
 from .forms import SportForm, CampusForm 
@@ -259,3 +260,22 @@ class StatisticCreateView(LoginRequiredMixin, UserPassesTestMixin, CreateView):
         messages.success(self.request, f"Statistic '{self.object.name}' added successfully.")
         # We build the URL to go back to the list page for the sport this statistic belongs to.
         return reverse('sport-statistics', kwargs={'pk': self.object.sport.pk})
+    
+
+class AboutView(LoginRequiredMixin, TemplateView):
+    template_name = 'core/about.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = "About AthletiTrack"
+        return context
+
+
+# --- THIS IS THE NEW VIEW FOR THE "HELP" PAGE ---
+class HelpView(LoginRequiredMixin, TemplateView):
+    template_name = 'core/help.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['page_title'] = "Help & User Guide"
+        return context

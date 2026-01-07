@@ -150,6 +150,7 @@
                                 <li><a class="dropdown-item" href="{% url 'profile' %}">My Profile</a></li>
                                 {% if user.role == 'ADMINISTRATOR' %}<li><a class="dropdown-item" href="{% url 'settings-dashboard' %}">Settings</a></li>{% endif %}
                                 <li><a class="dropdown-item" href="{% url 'password_change' %}">Change Password</a></li>
+                                <li><a class="dropdown-item" href="{% url 'help' %}">Help</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><form action="{% url 'logout' %}" method="post" class="dropdown-item p-0">{% csrf_token %}<button type="submit" class="btn btn-link text-decoration-none text-dark w-100 text-start ps-3">Logout</button></form></li>
                             </ul>
@@ -209,7 +210,14 @@
     <div id="main-content">
         {% if messages %}{% for message in messages %}<div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endfor %}{% endif %}
         {% block content %}{% endblock %}
-        <footer class="text-center mt-5 py-3 bg-light border-top"><p>&copy; 2025 EVSU AthletiTrack</p></footer>
+        <footer class="text-center mt-5 py-3 bg-light border-top">
+            <p class="mb-1">&copy; 2025 EVSU AthletiTrack</p>
+            <small>
+                <a href="{% url 'about' %}" class="text-muted">About</a>
+                &middot;
+                <a href="{% url 'help' %}" class="text-muted">Help</a>
+            </small>
+        </footer>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>

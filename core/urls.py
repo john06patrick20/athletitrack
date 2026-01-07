@@ -3,7 +3,7 @@ from django.urls import path
 from . import views
 from .views import SettingsDashboardView, TeamCreateView
 from .views import SportListView, SportCreateView, SportUpdateView, SportDeleteView
-from .views import CampusListView, CampusCreateView, CampusUpdateView, CampusDeleteView
+from .views import CampusListView, CampusCreateView, CampusUpdateView, CampusDeleteView, AboutView, HelpView
 
 urlpatterns = [
     # You may want to create a urls.py for core if you haven't already
@@ -39,5 +39,7 @@ urlpatterns = [
     path('settings/campuses/add/', CampusCreateView.as_view(), name='campus-add'),
     path('settings/campuses/<int:pk>/edit/', CampusUpdateView.as_view(), name='campus-edit'),
     path('settings/campuses/<int:pk>/delete/', CampusDeleteView.as_view(), name='campus-delete'),
+    path('about/', AboutView.as_view(), name='about'),
+    path('help/', HelpView.as_view(), name='help'),
 ]
 
