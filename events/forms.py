@@ -68,21 +68,17 @@ class EventScheduleForm(forms.ModelForm):
 
 class GameReportForm(forms.Form):
     """
-    A dynamic form for entering a "game report." It now intelligently
-    excludes the automated Win/Loss stats from the input fields.
+    A dynamic form that builds its fields for a game report, adding special
+    data attributes to enable automatic point and percentage calculations on the front-end.
     """
     def __init__(self, *args, **kwargs):
         sport = kwargs.pop('sport', None)
         super().__init__(*args, **kwargs)
 
         if sport:
-            # Get all universal AND sport-specific stats,
-            # BUT EXCLUDE the ones with the short names 'wins' and 'losses'.
             all_stats_for_sport = Statistic.objects.filter(
                 Q(sport__isnull=True) | Q(sport=sport)
-            ).exclude(
-                short_name__in=['wins', 'losses']
-            )
+            ).exclude(short_name__in=['wins', 'losses'])
             
             for stat in all_stats_for_sport:
                 attrs = {
@@ -91,7 +87,22 @@ class GameReportForm(forms.Form):
                     'value': '0'
                 }
                 
+                # Check for the total points field (case-insensitive)
+                if stat.short_name.lower() == 'pts':
+                    attrs['readonly'] = True
+                    attrs['data-stat-type'] = 'points-total'
+                
                 stat_name_lower = stat.name.lower()
+
+                # Add data attributes for point-contributing fields
+                if '3-point made' in stat_name_lower:
+                    attrs['data-points-worth'] = '3'
+                elif '2-point made' in stat_name_lower:
+                    attrs['data-points-worth'] = '2'
+                elif 'free throw made' in stat_name_lower:
+                    attrs['data-points-worth'] = '1'
+                
+                # Add data attributes for percentage calculations
                 if 'made' in stat_name_lower:
                     attrs['data-stat-type'] = 'made'
                     attrs['data-stat-group'] = stat_name_lower.replace(' made', '').replace(' ', '-')

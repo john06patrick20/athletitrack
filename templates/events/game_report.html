@@ -165,6 +165,24 @@ $(document).ready(function() {
     // === 2. CALCULATION FUNCTIONS ===
     // =======================================================
 
+    // --- FEATURE 2: Auto-calculate Individual Player Points ---
+    function calculateTotalPoints(row) {
+        let totalPoints = 0;
+        row.find('input[data-points-worth]').each(function() {
+            const input = $(this);
+            const pointsWorth = parseInt(input.data('points-worth'), 10);
+            const quantity = parseInt(input.val(), 10) || 0;
+            if (!isNaN(pointsWorth) && !isNaN(quantity)) {
+                totalPoints += pointsWorth * quantity;
+            }
+        });
+        const pointsTotalInput = row.find('input[data-stat-type="points-total"]');
+        if (pointsTotalInput.length) {
+            pointsTotalInput.val(totalPoints);
+            // DO NOT trigger input here, to prevent an infinite loop.
+        }
+    }
+
     function calculateColumnTotals() {
         statsTable.find('tfoot [data-total-for]').each(function() {
             const footerCell = $(this);
@@ -212,10 +230,21 @@ $(document).ready(function() {
 
     function updateTeamScore() {
         const ourScoreInput = $('#id_our_score');
-        const pointsTotalCell = statsTable.find("tfoot [data-total-for='PTS']"); // Assumes 'pts' is the short_name for Points
+        const pointsTotalCell = statsTable.find("tfoot [data-total-for='pts']"); // Assumes 'pts' is the short_name for Points
         if (pointsTotalCell.length) {
             ourScoreInput.val(pointsTotalCell.text());
         }
+    }
+
+    // Main calculation chain
+    function runAllCalculations(changedElement) {
+        const currentRow = $(changedElement).closest('tr');
+        if ($(changedElement).data('points-worth')) {
+            calculateTotalPoints(currentRow);
+        }
+        calculateColumnTotals();
+        calculatePercentages();
+        updateTeamScore(); // The new function call
     }
 
 
