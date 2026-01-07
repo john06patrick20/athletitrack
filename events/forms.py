@@ -88,9 +88,10 @@ class GameReportForm(forms.Form):
                 }
                 
                 # Check for the total points field (case-insensitive)
-                if stat.short_name.lower() == 'PTS':
+                if stat.short_name.lower() == 'pts':
                     attrs['readonly'] = True
                     attrs['data-stat-type'] = 'points-total'
+                    attrs['id'] = 'total-points-cell' # Not quite right for a formset```
                 
                 stat_name_lower = stat.name.lower()
 
