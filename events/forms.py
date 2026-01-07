@@ -68,34 +68,32 @@ class EventScheduleForm(forms.ModelForm):
 
 class GameReportForm(forms.Form):
     """
-    A dynamic form that builds its fields for a game report, adding special
-    data attributes to enable automatic point and percentage calculations on the front-end.
+    A dynamic form for a game report. It builds its fields based on the sport
+    and adds special data attributes to the widgets to enable automatic front-end
+    calculations for points and percentages.
     """
     def __init__(self, *args, **kwargs):
         sport = kwargs.pop('sport', None)
         super().__init__(*args, **kwargs)
 
         if sport:
+            # Get all relevant stats, excluding the automated Win/Loss
             all_stats_for_sport = Statistic.objects.filter(
                 Q(sport__isnull=True) | Q(sport=sport)
             ).exclude(short_name__in=['wins', 'losses'])
             
             for stat in all_stats_for_sport:
+                # Base attributes for all numeric input fields
                 attrs = {
                     'class': 'form-control form-control-sm text-center stat-input',
                     'min': '0',
-                    'value': '0'
+                    'value': '0' # Start all fields at 0 for a clean UI
                 }
-                
-                # Check for the total points field (case-insensitive)
-                if stat.short_name.lower() == 'pts':
-                    attrs['readonly'] = True
-                    attrs['data-stat-type'] = 'points-total'
-                    attrs['id'] = 'total-points-cell' # Not quite right for a formset```
                 
                 stat_name_lower = stat.name.lower()
 
-                # Add data attributes for point-contributing fields
+                # --- LOGIC FOR AUTO-CALCULATING POINTS ---
+                # Add a 'data-points-worth' attribute to any stat that scores points
                 if '3-point made' in stat_name_lower:
                     attrs['data-points-worth'] = '3'
                 elif '2-point made' in stat_name_lower:
@@ -103,20 +101,28 @@ class GameReportForm(forms.Form):
                 elif 'free throw made' in stat_name_lower:
                     attrs['data-points-worth'] = '1'
                 
-                # Add data attributes for percentage calculations
+                # If this is the main 'Points' stat, make it read-only
+                if stat.short_name.lower() == 'pts':
+                    attrs['readonly'] = True
+                    attrs['class'] += ' bg-light fw-bold' # Style it to look calculated
+                # --- END OF POINTS LOGIC ---
+
+                # --- LOGIC FOR AUTO-CALCULATING PERCENTAGES ---
+                # Add 'data-stat-type' and 'data-stat-group' for made/attempted pairs
                 if 'made' in stat_name_lower:
                     attrs['data-stat-type'] = 'made'
+                    # Creates a group name like '3-pointers'
                     attrs['data-stat-group'] = stat_name_lower.replace(' made', '').replace(' ', '-')
                 elif 'attempted' in stat_name_lower:
                     attrs['data-stat-type'] = 'attempted'
                     attrs['data-stat-group'] = stat_name_lower.replace(' attempted', '').replace(' ', '-')
+                # --- END OF PERCENTAGE LOGIC ---
                 
                 self.fields[stat.short_name] = forms.IntegerField(
                     label=stat.name,
                     required=False,
                     widget=forms.NumberInput(attrs=attrs)
                 )
-
 
 class EventOutcomeForm(forms.ModelForm):
     class Meta:

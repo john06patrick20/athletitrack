@@ -165,21 +165,18 @@ $(document).ready(function() {
     // === 2. CALCULATION FUNCTIONS ===
     // =======================================================
 
-    // --- FEATURE 2: Auto-calculate Individual Player Points ---
-    function calculateTotalPoints(row) {
+    function calculatePlayerTotalPoints(row) {
         let totalPoints = 0;
         row.find('input[data-points-worth]').each(function() {
             const input = $(this);
-            const pointsWorth = parseInt(input.data('points-worth'), 10);
+            const pointsWorth = parseInt(input.data('points-worth'), 10) || 0;
             const quantity = parseInt(input.val(), 10) || 0;
-            if (!isNaN(pointsWorth) && !isNaN(quantity)) {
-                totalPoints += pointsWorth * quantity;
-            }
+            totalPoints += pointsWorth * quantity;
         });
-        const pointsTotalInput = row.find('input[data-stat-type="points-total"]');
+        const pointsTotalInput = row.find('input[name$="-pts"]'); // Assumes short_name is 'pts'
         if (pointsTotalInput.length) {
             pointsTotalInput.val(totalPoints);
-            // DO NOT trigger input here, to prevent an infinite loop.
+            // DO NOT trigger 'input' here to avoid an infinite loop.
         }
     }
 
@@ -230,14 +227,7 @@ $(document).ready(function() {
 
     function updateTeamScore() {
         const ourScoreInput = $('#id_our_score');
-        //const pointsTotalCell = statsTable.find("tfoot [data-total-for='PTS']"); // Assumes 'pts' is the short_name for Points
-        //if (pointsHeader.length) {
-        //    ourScoreInput.val(pointsTotalCell.text());
-        //}
-        const pointsTotalCell = statsTable.find("tfoot [data-total-for]").filter(function() {
-            return $(this).data('total-for').toLowerCase() === 'pts';
-        });
-
+        const pointsTotalCell = statsTable.find("tfoot [data-total-for='PTS']"); // Assumes 'pts'
         if (pointsTotalCell.length) {
             ourScoreInput.val(pointsTotalCell.text());
         }
@@ -245,9 +235,9 @@ $(document).ready(function() {
 
     // Main calculation chain
     function runAllCalculations(changedElement) {
-        const currentRow = $(changedElement).closest('tr');
-        if ($(changedElement).data('points-worth')) {
-            calculateTotalPoints(currentRow);
+        const currentRow = $(changedInput).closest('tr');
+        if ($(changedInput).data('points-worth')) {
+            calculatePlayerTotalPoints(currentRow);
         }
         calculateColumnTotals();
         calculatePercentages();
@@ -280,7 +270,7 @@ $(document).ready(function() {
 
     // Main listener for any input change (typing or button click)
     statsTable.on('input', 'input[type="number"]', function() {
-        runAllCalculations(); // Update totals and percentages instantly
+        runAllCalculations(this); // Update totals and percentages instantly
         debouncedAutoSave(this); // Start the timer for auto-saving
     });
 
