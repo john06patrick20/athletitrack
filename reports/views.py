@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.db import models
 import datetime
 from coaches.models import Coach
+from athletes.forms import TeamSelectForm
 from django.http import JsonResponse, HttpResponse
 from django.db.models import Count, Avg, Max, Min, Sum, Q, F
 from django.db.models.functions import Cast
@@ -184,80 +185,94 @@ def get_performance_chart_data(request):
     return JsonResponse({'error': 'Invalid or missing parameters'}, status=400)
 
 @login_required
+def export_filter_view(request):
+    """
+    Displays a filter page for Administrators to select which team to export.
+    """
+    if not request.user.role == CustomUser.Role.ADMINISTRATOR:
+        messages.error(request, "You do not have permission to access this page.")
+        return redirect('report-dashboard')
+
+    form = TeamSelectForm()
+    context = {
+        'form': form,
+        'page_title': 'Export Athlete Data by Team'
+    }
+    return render(request, 'reports/export_filter.html', context)
+# --- END OF MISSING VIEW ---
+
+
+@login_required
 def export_athletes_csv(request):
     """
-    Generates a comprehensive CSV file of all athletes, including a pivoted
-    summary of their total performance statistics, and appends the downloader's name.
+    Generates a CSV of athletes, filtered by team.
+    - Admins can choose a team via the export_filter_view.
+    - Coaches are automatically restricted to their own team.
     """
-    response = HttpResponse(
-        content_type='text/csv',
-        headers={'Content-Disposition': f'attachment; filename="athletitrack_full_export_{datetime.date.today()}.csv"'},
-    )
+    user = request.user
+    team_id = request.GET.get('team')
+    team = None
+    athlete_queryset = Athlete.objects.none() # Start with an empty queryset
+
+    # Role-Based Filtering Logic
+    if user.role == CustomUser.Role.ADMINISTRATOR:
+        if not team_id:
+            return redirect('export-filter')
+        team = get_object_or_404(Team, pk=team_id)
+        athlete_queryset = Athlete.objects.filter(team=team)
+    
+    elif user.role == CustomUser.Role.COACH and hasattr(user, 'coach') and user.coach.team:
+        team = user.coach.team
+        athlete_queryset = Athlete.objects.filter(team=team)
+    
+    else:
+        messages.error(request, "You are not authorized to export this data.")
+        return redirect('report-dashboard')
+    
+    # CSV Generation Logic
+    filename = f"athletitrack_export_{team.sport.name}_{team.campus.name}_{team.get_gender_display()}_{datetime.date.today()}.csv"
+    response = HttpResponse(content_type='text/csv', headers={'Content-Disposition': f'attachment; filename="{filename}"'})
     writer = csv.writer(response)
 
-    # --- Step 1: Determine the Dynamic Headers ---
-    # Get all unique statistic definitions to build the columns.
-    unique_stats = Statistic.objects.all().order_by('name')
-    # Use the short_name for clean, consistent column headers (e.g., 'pts', 'ast').
+    # Dynamic Headers based on the selected team's sport
+    unique_stats = Statistic.objects.filter(Q(sport=team.sport) | Q(sport__isnull=True)).order_by('name')
     stat_headers = [stat.short_name for stat in unique_stats]
-
-    # Define the static, personal info headers.
     static_headers = ['User ID', 'First Name', 'Last Name', 'Email', 'Gender', 'Birthday', 'Team', 'Coach']
-    
-    # Combine them to create the full header row for the CSV file.
     writer.writerow(static_headers + stat_headers)
 
-
-    # --- Step 2: Get All Athletes and Their Stats Efficiently ---
-    # Use prefetch_related to get all stats for all athletes in just a few queries.
-    athletes = Athlete.objects.all().select_related(
+    # Get athletes from the filtered queryset
+    athletes = athlete_queryset.select_related(
         'user', 'team', 'coach__user'
     ).prefetch_related(
         'performance_stats', 'performance_stats__statistic'
     )
 
-    # --- Step 3: Loop Through Each Athlete and Build Their Row ---
+    # Loop and write rows
     for athlete in athletes:
-        # Create a dictionary to hold the pivoted and summed stats for this athlete.
-        # Example: {'pts': 125, 'ast': 42}
         stats_pivot = {}
         for stat_record in athlete.performance_stats.all():
             short_name = stat_record.statistic.short_name
             try:
-                # Safely convert the stat's value to a float and sum it up.
                 value = float(stat_record.value)
                 stats_pivot[short_name] = stats_pivot.get(short_name, 0) + value
             except (ValueError, TypeError):
-                continue # Ignore non-numeric stats for this summary export.
+                continue
 
-        # Build the static (left side) of the row with personal info.
         row_data = [
-            athlete.user.id,
-            athlete.user.first_name,
-            athlete.user.last_name,
-            athlete.user.email,
-            athlete.user.get_gender_display(),
-            athlete.user.birthday,
-            str(athlete.team) if athlete.team else 'N/A',
+            athlete.user.id, athlete.user.first_name, athlete.user.last_name, athlete.user.email,
+            athlete.user.get_gender_display(), athlete.user.birthday, str(athlete.team),
             athlete.coach.user.get_full_name() if athlete.coach and athlete.coach.user else 'N/A',
         ]
         
-        # Build the dynamic (right side) of the row with the stats.
-        # Loop through our ordered stat_headers to ensure data is in the correct column.
         for short_name in stat_headers:
-            # Get the total for this stat from the pivot dictionary, or 0 if none was recorded.
             row_data.append(stats_pivot.get(short_name, 0))
-
-        # Write the complete row to the CSV file.
         writer.writerow(row_data)
 
-
-    # --- Step 4: Add the Footer ---
-    writer.writerow([]) # Add a blank row for spacing.
-    
-    # Add the attribution footer with the name of the user who downloaded the report.
-    downloader_name = request.user.get_full_name() or request.user.username
-    writer.writerow(['Report generated by:', downloader_name])
+    # Footer
+    writer.writerow([])
+    downloader_name = user.get_full_name() or user.username
+    writer.writerow(['Report generated for:', str(team)])
+    writer.writerow(['Generated by:', downloader_name])
     writer.writerow(['Date generated:', datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
 
     return response

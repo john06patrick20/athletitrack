@@ -9,9 +9,17 @@
 
 <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
     <h1 class="h2">{{ report_title|default:"Analytics Dashboard" }}</h1>
-    <a href="{% url 'export-athletes-csv' %}" class="btn btn-outline-info btn-sm">
-        <i class="fas fa-download me-2"></i>Export All Athlete Data
-    </a>
+    <!-- NEW, ROLE-AWARE EXPORT BUTTON -->
+    <div>
+        {% if user.role == 'ADMINISTRATOR' %}
+            <!-- Admins go to the filter page first -->
+            <a href="{% url 'export-filter' %}" class="btn btn-outline-info btn-sm">Export Team Data...</a>
+        
+        {% elif user.role == 'COACH' and user.coach.team %}
+            <!-- Coaches get a direct download link for their own team -->
+            <a href="{% url 'export-athletes-csv' %}?team={{ user.coach.team.id }}" class="btn btn-outline-info btn-sm">Export My Team Data</a>
+        {% endif %}
+    </div>
 </div>
 
 <!--

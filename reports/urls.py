@@ -5,6 +5,7 @@ from . import views
 urlpatterns = [
     path('', views.report_dashboard, name='report-dashboard'),
     path('chart/performance-trend/', views.performance_trend_chart, name='performance-trend-chart'),
+    path('export/', views.export_filter_view, name='export-filter'),
     path('export/athletes-csv/', views.export_athletes_csv, name='export-athletes-csv'),
 
     path('', views.report_dashboard, name='report-dashboard'),
