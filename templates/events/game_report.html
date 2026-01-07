@@ -230,7 +230,7 @@ $(document).ready(function() {
 
     function updateTeamScore() {
         const ourScoreInput = $('#id_our_score');
-        const pointsTotalCell = statsTable.find("tfoot [data-total-for='pts']"); // Assumes 'pts' is the short_name for Points
+        const pointsTotalCell = statsTable.find("tfoot [data-total-for='PTS']"); // Assumes 'pts' is the short_name for Points
         if (pointsTotalCell.length) {
             ourScoreInput.val(pointsTotalCell.text());
         }
