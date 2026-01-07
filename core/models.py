@@ -67,7 +67,7 @@ class Statistic(models.Model):
     # Remove unique=True from here
     short_name = models.CharField(
         max_length=20,
-        help_text="A short, unique code for this stat (e.g., 'ppg')"
+        help_text="A short, unique code for this stat (e.g., 'PPG') no period must be uppercase"
     )
     # --- END OF FIX ---
     description = models.TextField(blank=True, null=True)
